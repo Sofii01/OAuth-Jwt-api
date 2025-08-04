@@ -8,6 +8,7 @@ import com.app.oauthjwtapi.services.interfaces.IRoleService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,7 +36,13 @@ public class RoleServiceImpl implements IRoleService {
 
     @Override
     public RoleResponseDto save(String name) {
+        String roleName = name.toUpperCase();
         //validar nombre si ya existe, pasar a upper case para guardar
+        Optional<Role> op = roleRepository.findByName(roleName);
+        if (op.isPresent()) {
+            Role role = op.get();
+            throw new RuntimeException("Role already exists" + role); //puede ser un alreadyExists exception
+        }
         Role role = new Role();
         role.setName(name);
         roleRepository.save(role);

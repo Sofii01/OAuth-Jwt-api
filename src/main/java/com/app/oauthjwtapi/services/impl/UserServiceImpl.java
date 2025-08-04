@@ -3,6 +3,7 @@ package com.app.oauthjwtapi.services.impl;
 import com.app.oauthjwtapi.dtos.UserRequestDto;
 import com.app.oauthjwtapi.dtos.UserResponseDto;
 import com.app.oauthjwtapi.mappers.IUserMapper;
+import com.app.oauthjwtapi.models.entities.Role;
 import com.app.oauthjwtapi.models.entities.User;
 import com.app.oauthjwtapi.repositories.IUserRepository;
 import com.app.oauthjwtapi.services.interfaces.IUserService;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,18 +35,24 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public UserResponseDto create(UserRequestDto request) {
-        Optional<User> v = userRepository.findByEmail(request.getEmail());
-        if(v.isPresent()) {
-            throw new RuntimeException(); //exception alreadyExistis
-        }
         //validar si existe otro email igual
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            throw new RuntimeException(); //exception alreadyExistis
+        });
         User user = new User();
         user.setEmail(request.getEmail());
-        //y si la recibo cifrada?
         String encodedPassword = encoder.encode(request.getPassword());
         user.setPassword(encodedPassword);
-        //user.getRoles().isEmpty(); hacer que agregue el nuevo rol a la lista y lanzar una exception en caso de que se quiera agregar una ya existente
-        return null;
+        Set<Role> roles = request.getRoles().stream().map(role -> new Role(role.toUpperCase())
+        ).collect(Collectors.toSet());
+        // Validar roles duplicados en el mismo request
+        if (roles.size() != request.getRoles().size()) {
+            throw new RuntimeException("Roles must be unique");
+        }
+        user.setRoles(roles);
+        User saved = userRepository.save(user);
+
+        return mapper.toDto(saved);
     }
 
     @Override
