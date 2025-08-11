@@ -5,6 +5,7 @@ import com.app.oauthjwtapi.dtos.UserResponseDto;
 import com.app.oauthjwtapi.mappers.IUserMapper;
 import com.app.oauthjwtapi.models.entities.Role;
 import com.app.oauthjwtapi.models.entities.User;
+import com.app.oauthjwtapi.repositories.IRoleRepository;
 import com.app.oauthjwtapi.repositories.IUserRepository;
 import com.app.oauthjwtapi.services.interfaces.IUserService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,11 +21,13 @@ public class UserServiceImpl implements IUserService {
     private final IUserRepository userRepository;
     private final IUserMapper mapper;
     private final BCryptPasswordEncoder encoder;
+    private final IRoleRepository roleRepository;
 
-    public UserServiceImpl(IUserRepository userRepository, IUserMapper mapper, BCryptPasswordEncoder encoder) {
+    public UserServiceImpl(IUserRepository userRepository, IUserMapper mapper, BCryptPasswordEncoder encoder, IRoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.mapper = mapper;
         this.encoder = encoder;
+        this.roleRepository = roleRepository;
     }
 
     @Override
@@ -43,8 +46,12 @@ public class UserServiceImpl implements IUserService {
         user.setEmail(request.getEmail());
         String encodedPassword = encoder.encode(request.getPassword());
         user.setPassword(encodedPassword);
-        Set<Role> roles = request.getRoles().stream().map(role -> new Role(role.toUpperCase())
-        ).collect(Collectors.toSet());
+        Set<Role> roles = request.getRoles().stream()
+                .map(name -> roleRepository.findByName(name)
+                        .orElseThrow(() -> new RuntimeException("Role not found: " + name)))
+                .collect(Collectors.toSet());
+
+
         // Validar roles duplicados en el mismo request
         if (roles.size() != request.getRoles().size()) {
             throw new RuntimeException("Roles must be unique");

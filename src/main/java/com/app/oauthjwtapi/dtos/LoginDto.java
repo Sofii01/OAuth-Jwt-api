@@ -15,6 +15,6 @@ public class LoginDto {
     @NotBlank
     private String email;
     @NotBlank
-    @Size(min = 6, max = 16)
+
     private String password;
 }
